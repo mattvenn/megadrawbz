@@ -52,6 +52,7 @@ if __name__ == '__main__':
     # Specifications of the robot which will do the drawing
     robot_spec = get_botspec_from_args(args)
     print "Got bot spec: ",robot_spec.show()
+    print "width = %d" % args.width
     print "Converting ",args.input, " to ", args.output
 
     # File to put gcode into

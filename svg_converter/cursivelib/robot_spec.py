@@ -81,11 +81,15 @@ def add_botspec_arguments(parser) :
         action='store', dest='bot_side_margin', type=int,
         help="side margin of the bot's drawing area")
     parser.add_argument('--bot_spec',
-	action='store', dest='bot_spec', type=str, 
-	help="Robot spec as height, width, top_margin, side_margin")
+        action='store', dest='bot_spec', type=str, 
+        help="Robot spec as height, width, top_margin, side_margin")
     parser.add_argument('--bot_config_file',
         action='store', dest='bot_config_file', type=str, 
         help="side margin of the bot's drawing area")
+    parser.add_argument('--pyconf',
+        action='store', dest='pyconf', type=str, 
+        help="py config")
+
 
 # Tries to find a valid bot spec from all of the parser's arguments
 def get_botspec_from_args(args) :
@@ -97,6 +101,10 @@ def get_botspec_from_args(args) :
         return string_to_spec(args.bot_spec)
     elif args.bot_config_file :
         return config_to_spec(args.bot_config_file)
+    elif args.pyconf :
+        import importlib
+        c = importlib.import_module(args.pyconf)
+        return RobotSpec(c.conf['width'],c.conf['height'],c.conf['top'],c.conf['side'])
     elif os.path.isfile("config") :
         return config_to_spec("config")
     else :

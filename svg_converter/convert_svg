@@ -2,13 +2,15 @@
 
 CURSIVE_HOME=.
 DATA_HOME=../designs
-WIDTH=1575
-HEIGHT=2000
-SIDE=300
-TOP=400
-DRAW=800
+
+#WIDTH=1575
+#HEIGHT=2000
+#SIDE=300
+#TOP=400
+#DRAW=800
 
 BASE=$1
+WIDTH=${2:-500}
 
 INPUT_SVG=$DATA_HOME/originals/$BASE.svg 
 GENERATED_GCODE=$DATA_HOME/gcodes/$BASE.gcode 
@@ -16,18 +18,14 @@ CHECK_SVG=$DATA_HOME/checks/$BASE.check.svg
 POINTS=$DATA_HOME/points/$BASE.d
 VIZ=$DATA_HOME/visualisation/$BASE.html
 
-SPEC="$WIDTH,$HEIGHT,$TOP,$SIDE" 
 
 source `which virtualenvwrapper.sh`
 workon cursivedata
 
-echo "Drawing width:$DRAW, Bot Spec:'$SPEC'"
-echo "Converting $INPUT_SVG to $GENERATED_GCODE (width:$DRAW, spec:'$SPEC')"
-python $CURSIVE_HOME/convert.py --bot_spec=$SPEC --width=$DRAW --input $INPUT_SVG --output $GENERATED_GCODE
-
+python $CURSIVE_HOME/convert.py --width $WIDTH --pyconf conf --input $INPUT_SVG --output $GENERATED_GCODE
 
 echo "Converting $INPUT_SVG to $GENERATED_GCODE"
-python gcode_to_svg.py --bot_spec=$SPEC --input $GENERATED_GCODE --output $CHECK_SVG
+python gcode_to_svg.py --pyconf conf --input $GENERATED_GCODE --output $CHECK_SVG
 
 deactivate
 
