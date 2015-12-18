@@ -3,7 +3,7 @@ import subprocess
 import os
 import re
 
-from svgpath import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
+from svg.path import Path, Line, Arc, CubicBezier, QuadraticBezier, parse_path
 
 # a fantastic error class!
 class GCodeConversionError(Exception):

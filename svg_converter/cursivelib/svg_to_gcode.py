@@ -2,7 +2,7 @@ import pysvg.structure
 import pysvg.builders
 from pysvg.parser import parse
 
-import cursivelib.svg as svg
+import cursivelib.cursive_svg as svg
 
 
 class SVGPreparation() :

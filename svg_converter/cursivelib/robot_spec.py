@@ -1,5 +1,4 @@
-
-import cursivelib.svg as svg
+import cursivelib.cursive_svg as svg
 import re
 import json
 from pprint import pprint

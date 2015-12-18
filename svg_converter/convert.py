@@ -19,7 +19,7 @@ from cursivelib.robot_spec import *
 from cursivelib.svg_to_gcode import *
 from cursivelib.pycam_gcode import *
 from cursivelib.native_gcode import *
-import cursivelib.svg as svg
+import cursivelib.cursive_svg as svg
 #from cursivedata.models.endpoint import *
 
 from cursivelib.robot_spec import add_botspec_arguments
