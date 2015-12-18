@@ -9,7 +9,7 @@ from cursivelib.robot_spec import string_to_spec
 from cursivelib.svg_to_gcode import *
 from cursivelib.gcode import *
 from cursivelib.pycam_gcode import *
-import cursivelib.svg as svg
+import cursivelib.cursive_svg as svg
 import pysvg.text as txt
 
 from cursivelib.robot_spec import add_botspec_arguments

@@ -1,4 +1,3 @@
-
 import re
 import argparse
 
@@ -7,7 +6,7 @@ from cursivelib.robot_spec import *
 from cursivelib.robot_spec import string_to_spec
 from cursivelib.svg_to_gcode import *
 from cursivelib.pycam_gcode import *
-import cursivelib.svg as svg
+import cursivelib.cursive_svg as svg
 import pysvg.text as txt
 
 

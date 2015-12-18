@@ -18,16 +18,10 @@ CHECK_SVG=$DATA_HOME/checks/$BASE.check.svg
 POINTS=$DATA_HOME/points/$BASE.d
 VIZ=$DATA_HOME/visualisation/$BASE.html
 
-
-source `which virtualenvwrapper.sh`
-workon cursivedata
-
 python $CURSIVE_HOME/convert.py --width $WIDTH --pyconf conf --input $INPUT_SVG --output $GENERATED_GCODE
 
 echo "Converting $INPUT_SVG to $GENERATED_GCODE"
 python gcode_to_svg.py --pyconf conf --input $GENERATED_GCODE --output $CHECK_SVG
-
-deactivate
 
 echo "path planning $GENERATED_GCODE to $POINTS"
 ../planner/plan.py --file $GENERATED_GCODE --out $POINTS
