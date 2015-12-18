@@ -8,11 +8,9 @@ conf = {
     'side' : 300,
     'top' : 400,
 
+    'can_on' : 90,
+    'can_off' : 30,
+
     'corner_spd_tune' : 0.01, # not in use
-#WIDTH=1575
-#HEIGHT=2000
-#SIDE=300
-#TOP=400
-#DRAW=800
 }
 

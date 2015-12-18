@@ -6,6 +6,7 @@ import struct
 import pickle
 import crcmod
 import argparse
+from conf import conf
 
 #status
 BUFFER_OK = 0
@@ -153,9 +154,9 @@ class Control():
             b = points['i'][i]['b']
             can = points['i'][i]['can']
             if can == 0:
-                can = 30
+                can = conf['can_off']
             if can == 1:
-                can = 90
+                can = conf['can_on']
             logging.debug("writing %d (%d,%d can %d)" % (i,a,b,can))
             self.send_packet(LOAD, a, b, can, i)
             status, data = self.get_response()
