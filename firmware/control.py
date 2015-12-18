@@ -182,6 +182,7 @@ if __name__ == '__main__':
     parser.add_argument('--can', action='store', default=90, help="can trigger amount", type=int)
     #parser.add_argument('--safez', action='store', dest='safez', type=float, default=1, help="z safety")
 
+    start_time = time.time()
     args = parser.parse_args()
     robot = Control(args.port)
     if args.touchoff:
@@ -198,3 +199,5 @@ if __name__ == '__main__':
         robot.run_robot(args.file)
     else:
         parser.print_help()
+   
+    logging.info("run took %d seconds" % (time.time() - start_time))

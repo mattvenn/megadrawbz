@@ -18,7 +18,8 @@ if __name__ == '__main__':
     moves = Moves()
 
     parser = argparse.ArgumentParser(description="turn gcodes into servo commands")
-    parser.add_argument('--file', required=True, action='store', dest='file', help="file to open")
+    parser.add_argument('--file', required=True, action='store', help="file to open")
+    parser.add_argument('--out', action='store', default='points.d', help="file to write")
     args = parser.parse_args()
 
     can = 0
@@ -40,5 +41,5 @@ if __name__ == '__main__':
     moves.calc_point_times()
     moves.interpolate_pos_by_time()
     moves.calc_string_lengths()
-    moves.dump()
+    moves.dump(args.out)
 

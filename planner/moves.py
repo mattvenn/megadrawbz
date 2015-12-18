@@ -11,8 +11,8 @@ class Moves():
         self.points = []
         self.interp = []
   
-    def dump(self):
-        with open('points.d', 'w') as fh:
+    def dump(self,file):
+        with open(file, 'w') as fh:
             pickle.dump({'i' : self.interp, 'p' : self.points, 'bp': self.broken_points }, fh)
         
     def add_point(self, x, y, can):
