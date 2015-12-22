@@ -77,7 +77,7 @@ typedef struct {
 
 typedef struct {
     uint8_t status;
-    uint8_t data;
+    unsigned int data;
     uint8_t cksum;
 } Response;
 
@@ -104,9 +104,9 @@ struct Buffer buffer = {{}, 0, 0};;
 
 //command definitions - could separate this out into different types of things
 //and have each type taking a few bits in a status byte.
-enum BufferStatus {BUFFER_OK, BUFFER_EMPTY, BUFFER_FULL, BAD_CKSUM, MISSING_DATA,BUFFER_LOW, BUFFER_HIGH, BAD_CMD, START, STOP, LOAD, FLUSH, STATUS, SET_POS, LOAD_P, LOAD_I, LOAD_D };
+enum BufferStatus {BUFFER_OK, BUFFER_EMPTY, BUFFER_FULL, BAD_CKSUM, MISSING_DATA,BUFFER_LOW, BUFFER_HIGH, BAD_CMD, START, STOP, LOAD, FLUSH, STATUS, SET_POS, LOAD_P, LOAD_I, LOAD_D, GET_LPOS, GET_RPOS, SLV_TIMEOUT };
 
-typedef enum {SLV_LOAD, SLV_SET_POS, SLV_LOAD_P, SLV_LOAD_I, SLV_LOAD_D} SlaveCommand;
+typedef enum {SLV_LOAD, SLV_SET_POS, SLV_LOAD_P, SLV_LOAD_I, SLV_LOAD_D, SLV_GET_POS} SlaveCommand;
 
 //ring buffer functions
 void load(Packet data);
@@ -114,6 +114,8 @@ enum BufferStatus bufferWrite(Packet byte);
 enum BufferStatus bufferRead(Packet *byte);
 enum BufferStatus bufferStatus();
 void send_slave(SlaveCommand command, unsigned int data);
+Response get_slave();
+
 
 enum BufferStatus bufferStatus()
 {
@@ -306,6 +308,21 @@ void loop()
                 send_slave(SLV_SET_POS, data.rpos);
                 send_response(SET_POS,0);
                 break;
+            case GET_LPOS:
+                send_response(GET_LPOS, curpos / mm_to_pulse);
+                break;
+            case GET_RPOS:
+                {
+                    send_slave(SLV_GET_POS, 0);
+                    Response resp = get_slave();
+                    if(resp.status == BAD_CKSUM)
+                        send_response(BAD_CKSUM, 0);
+                    else if(resp.status == SLV_TIMEOUT)
+                        send_response(SLV_TIMEOUT, 0);
+                    else
+                        send_response(GET_RPOS, resp.data);
+                    break;
+                }
             case LOAD_P:
                 kp = data.lpos / 1000.0;
                 pid_init();
@@ -347,7 +364,7 @@ void loop()
 }
 
 
-void send_response(uint8_t status, uint8_t data)
+void send_response(uint8_t status, unsigned int data)
 {
     //wait for master to finish transmitting and listen
     delay(10);
@@ -385,10 +402,32 @@ void send_can(uint8_t amount)
 
     memcpy(&buf, &cmd, sizeof(Can));
 
+
     for(int b = 0; b < sizeof(Can); b++)
         can_serial.write(buf[b]);
 }
 
+Response get_slave()
+{
+    Response data;
+    if(slave_serial.available() == sizeof(Response))
+    {
+        char buf[sizeof(Response)];
+        // do something with status?
+        int status = slave_serial.readBytes(buf, sizeof(Response));
+
+        //copy buffer to structure
+        memcpy(&data, &buf, sizeof(Response));
+        //calculate cksum is ok
+        if(data.cksum != CRC8(buf,sizeof(Response)-1))
+        {
+            data.status = BAD_CKSUM;
+        }
+        return data;
+    }
+    data.status = SLV_TIMEOUT;
+    return data;
+}
 void send_slave(SlaveCommand command, unsigned int data)
 {
     Slave resp;
@@ -401,8 +440,15 @@ void send_slave(SlaveCommand command, unsigned int data)
 
     memcpy(&buf, &resp, sizeof(Slave));
 
+    // Enable RS485 Transmit    
+    digitalWrite(SSerialTxControl, RS485Transmit);  
+    delay(1);
+
     for(int b = 0; b < sizeof(Slave); b++)
         slave_serial.write(buf[b]);
+
+    digitalWrite(SSerialTxControl, RS485Receive);  
+    delay(1);
 
 }
 

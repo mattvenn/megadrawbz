@@ -27,6 +27,9 @@ SET_POS = 13
 LOAD_P = 14
 LOAD_I = 15
 LOAD_D = 16
+GET_LPOS = 17
+GET_RPOS = 18
+SLV_TIMEOUT = 19
 
 buflen = 32
 freq = 50.0
@@ -69,8 +72,8 @@ class TestBuffer(unittest.TestCase):
     def get_response(self):
         response = self._serial_port.read(3)
         if response:
-            status, data, cksum = struct.unpack('<BBB', response)
-            bin = struct.pack('<BB',status,data)
+            status, data, cksum = struct.unpack('<BHB', response)
+            bin = struct.pack('<BH',status,data)
             # check cksum
             self.assertEqual(cksum, crc8_func(bin))
             return status, data
@@ -83,6 +86,7 @@ class TestBuffer(unittest.TestCase):
         bin = struct.pack('<BHHBBB',command, lpos, rpos, can, id, crc8_func(bin))
 
         self.send_rs485_data(bin)
+
 
     def send_rs485_data(self, bin):
         self._serial_port.setDTR(False)
@@ -123,6 +127,22 @@ class TestBuffer(unittest.TestCase):
         status, data = self.get_response()
         self.assertEqual(status, SET_POS)
 
+    def test_get_pos(self):
+        l = 100
+        r = 200
+        self.send_packet(SET_POS,l,r)
+        status, data = self.get_response()
+        assert status == SET_POS
+
+        self.send_packet(GET_LPOS)
+        status, data = self.get_response()
+        assert status = GET_LPOS
+        assert data = l
+
+        self.send_packet(GET_RPOS)
+        status, data = self.get_response()
+        assert status = GET_RPOS
+        assert data = r
 
     def test_good_cksum(self):
         self._serial_port.flushInput()

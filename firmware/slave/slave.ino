@@ -4,7 +4,14 @@ typedef struct {
     uint8_t cksum;
 } Slave;
 
-enum SlaveCommand {SLV_LOAD, SLV_SET_POS, SLV_LOAD_P, SLV_LOAD_I, SLV_LOAD_D};
+typedef struct {
+    uint8_t status;
+    unsigned int data;
+    uint8_t cksum;
+} Response;
+
+//enum SlaveCommand {SLV_LOAD, SLV_SET_POS, SLV_LOAD_P, SLV_LOAD_I, SLV_LOAD_D};
+typedef enum {SLV_LOAD, SLV_SET_POS, SLV_LOAD_P, SLV_LOAD_I, SLV_LOAD_D, SLV_GET_POS} SlaveCommand;
 
 
 #define RS485Transmit    HIGH
@@ -27,6 +34,7 @@ volatile bool calc = false;
 int pwm = 128;
 #define MAX_POSREF 65535
 unsigned int posref = 0;
+long curpos = 0;
 float b0 = 0;
 float b1 = 0;
 float b2 = 0;
@@ -114,8 +122,8 @@ void loop()
         digitalWrite(LED_STATUS,HIGH);
 
         //pid calculation
-        long newPosition = myEnc.read();
-        xn = float(posref - newPosition);
+        curpos = myEnc.read();
+        xn = float(posref - curpos);
         yn = ynm1 + (b0*xn) + (b1*xnm1) + (b2*xnm2);
         ynm1 = yn;
 
@@ -172,6 +180,10 @@ void loop()
                 kd = data.pos / 1000.0;
                 pid_init();
                 break;
+            case SLV_GET_POS:
+                send_response(SLV_GET_POS, curpos / mm_to_pulse);
+                break;
+                
                 
         }
     }
@@ -193,4 +205,31 @@ void loop()
         }
     }
     */
+}
+
+void send_response(uint8_t status, unsigned int data)
+{
+    //wait for master to finish transmitting and listen
+    delay(10);
+    Response resp;
+    resp.status = status;
+    resp.data = data;
+
+    char buf[sizeof(Response)];
+    memcpy(&buf, &resp, sizeof(Response));
+    resp.cksum = CRC8(buf,sizeof(Response)-1);
+
+    memcpy(&buf, &resp, sizeof(Response));
+
+    // Enable RS485 Transmit    
+    digitalWrite(SSerialTxControl, RS485Transmit);  
+    delay(1);
+
+    for(int b = 0; b < sizeof(Response); b++)
+        master_serial.write(buf[b]);
+
+    //Serial.flush(); // remove this as it will block?
+    delay(1);
+    // Disable RS485 Transmit      
+    digitalWrite(SSerialTxControl, RS485Receive); 
 }
