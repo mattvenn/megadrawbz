@@ -153,8 +153,9 @@ enum BufferStatus bufferRead(Packet *byte){
 void setup()
 {
     Serial.begin(115200);
-    slave_serial.begin(57600); // 115200 too fast for reliable soft serial
     can_serial.begin(57600);
+    slave_serial.begin(57600); // 115200 too fast for reliable soft serial
+    slave_serial.listen();
 
     buttons_setup();
     setup_timer2();
@@ -172,7 +173,7 @@ void setup()
     pinMode(SerialTxControl, OUTPUT);  
     pinMode(SSerialTxControl, OUTPUT);  
     digitalWrite(SerialTxControl, RS485Receive);  // Init Transceiver
-    digitalWrite(SSerialTxControl, RS485Transmit);  // Init Transceiver
+    digitalWrite(SSerialTxControl, RS485Receive);  // Init Transceiver
 
     // pid init
     pid_init();
@@ -409,6 +410,7 @@ void send_can(uint8_t amount)
 
 Response get_slave()
 {
+    delay(5);
     Response data;
     if(slave_serial.available() == sizeof(Response))
     {
@@ -426,6 +428,7 @@ Response get_slave()
         return data;
     }
     data.status = SLV_TIMEOUT;
+    data.data = slave_serial.available();
     return data;
 }
 void send_slave(SlaveCommand command, unsigned int data)
@@ -447,9 +450,9 @@ void send_slave(SlaveCommand command, unsigned int data)
     for(int b = 0; b < sizeof(Slave); b++)
         slave_serial.write(buf[b]);
 
-    digitalWrite(SSerialTxControl, RS485Receive);  
+    slave_serial.flush();
     delay(1);
-
+    digitalWrite(SSerialTxControl, RS485Receive);  
 }
 
 // loads a data packet into ring buffer, responds to master

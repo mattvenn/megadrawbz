@@ -28,6 +28,9 @@ SET_POS = 13
 LOAD_P = 14
 LOAD_I = 15
 LOAD_D = 16
+GET_LPOS = 17
+GET_RPOS = 18
+SLV_TIMEOUT = 19
 
 buflen = 32
 freq = 50.0
@@ -70,10 +73,10 @@ class Control():
             return 'START'
         
     def get_response(self):
-        response = self._serial_port.read(3)
+        response = self._serial_port.read(4)
         if response:
-            status, data, cksum = struct.unpack('<BBB', response)
-            bin = struct.pack('<BB',status,data)
+            status, data, cksum = struct.unpack('<BHB', response)
+            bin = struct.pack('<BH',status,data)
             # check cksum
             assert cksum == crc8_func(bin)
             return status, data
@@ -100,6 +103,17 @@ class Control():
         status, data = self.get_response()
         assert status == SET_POS
 
+    def get_pos(self):
+        self.send_packet(GET_LPOS)
+        status, lpos = self.get_response()
+        assert status == GET_LPOS
+
+        self.send_packet(GET_RPOS)
+        status, rpos = self.get_response()
+        assert status == GET_RPOS
+
+        logging.info("l = %d, r = %d" % (lpos, rpos))
+        
     def single_load(self, l=0, r=0, can=0):
         logging.debug("move to %d,%d can = %d" % (l, r, can))
         self._serial_port.flushInput()
@@ -181,6 +195,7 @@ if __name__ == '__main__':
     parser.add_argument('--setpid', action='store', help="p,i,d")
     parser.add_argument('--moveto', action='store', help="change string lengths to a,b (mm)")
     parser.add_argument('--can', action='store', default=90, help="can trigger amount", type=int)
+    parser.add_argument('--getpos', const=True, action='store_const', help="get position")
     #parser.add_argument('--safez', action='store', dest='safez', type=float, default=1, help="z safety")
 
     start_time = time.time()
@@ -198,6 +213,8 @@ if __name__ == '__main__':
         robot.setpid(float(p), float(i), float(d))
     elif args.file:
         robot.run_robot(args.file)
+    elif args.getpos:
+        robot.get_pos()
     else:
         parser.print_help()
    

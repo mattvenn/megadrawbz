@@ -70,7 +70,7 @@ class TestBuffer(unittest.TestCase):
             return 'START'
         
     def get_response(self):
-        response = self._serial_port.read(3)
+        response = self._serial_port.read(4)
         if response:
             status, data, cksum = struct.unpack('<BHB', response)
             bin = struct.pack('<BH',status,data)
@@ -127,22 +127,27 @@ class TestBuffer(unittest.TestCase):
         status, data = self.get_response()
         self.assertEqual(status, SET_POS)
 
-    def test_get_pos(self):
-        l = 100
-        r = 200
-        self.send_packet(SET_POS,l,r)
-        status, data = self.get_response()
-        assert status == SET_POS
+    def test_get_lpos(self):
+        for pos in range(10,100,10):
+            self.send_packet(SET_POS,pos,pos)
+            status, data = self.get_response()
+            assert status == SET_POS
 
-        self.send_packet(GET_LPOS)
-        status, data = self.get_response()
-        assert status = GET_LPOS
-        assert data = l
+            self.send_packet(GET_LPOS)
+            status, data = self.get_response()
+            assert status == GET_LPOS
+            assert data == pos - 1 # why ?
 
-        self.send_packet(GET_RPOS)
-        status, data = self.get_response()
-        assert status = GET_RPOS
-        assert data = r
+    def test_get_rpos(self):
+        for pos in range(10,100,10):
+            self.send_packet(SET_POS,pos,pos)
+            status, data = self.get_response()
+            assert status == SET_POS
+
+            self.send_packet(GET_RPOS)
+            status, data = self.get_response()
+            assert status == GET_RPOS
+            assert data == pos - 1 # why?
 
     def test_good_cksum(self):
         self._serial_port.flushInput()

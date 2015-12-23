@@ -182,6 +182,7 @@ void loop()
                 break;
             case SLV_GET_POS:
                 send_response(SLV_GET_POS, curpos / mm_to_pulse);
+                //Serial.println("sent pos");
                 break;
                 
                 
@@ -209,8 +210,8 @@ void loop()
 
 void send_response(uint8_t status, unsigned int data)
 {
-    //wait for master to finish transmitting and listen
-    delay(10);
+    //wait for master to release rs485 control line
+    delay(2);
     Response resp;
     resp.status = status;
     resp.data = data;
@@ -228,7 +229,7 @@ void send_response(uint8_t status, unsigned int data)
     for(int b = 0; b < sizeof(Response); b++)
         master_serial.write(buf[b]);
 
-    //Serial.flush(); // remove this as it will block?
+    master_serial.flush(); // remove this as it will block?
     delay(1);
     // Disable RS485 Transmit      
     digitalWrite(SSerialTxControl, RS485Receive); 
