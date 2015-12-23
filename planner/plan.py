@@ -35,11 +35,6 @@ if __name__ == '__main__':
                 x, y = line.split(',')
                 moves.add_point(float(x), float(y), can)
 
-    moves.break_segments()
-    moves.calc_max_velocity()
-    moves.plan_velocity()
-    moves.calc_point_times()
-    moves.interpolate_pos_by_time()
-    moves.calc_string_lengths()
+    moves.process()
     moves.dump(args.out)
 

@@ -111,8 +111,8 @@ class Control():
         self.send_packet(GET_RPOS)
         status, rpos = self.get_response()
         assert status == GET_RPOS
-
         logging.info("l = %d, r = %d" % (lpos, rpos))
+        return lpos, rpos
         
     def single_load(self, l=0, r=0, can=0):
         logging.debug("move to %d,%d can = %d" % (l, r, can))
@@ -146,11 +146,21 @@ class Control():
         status, data = self.get_response()
         assert status == LOAD_D
 
-    def run_robot(self, file_name='points.d'):
-        with open(file_name) as fh:
-            points = pickle.load(fh)
-        logging.debug("file is %d points long" % len(points['i']))
-
+    def pre_move(self, points):
+        i = 0
+        a = points['i'][i]['a']
+        b = points['i'][i]['b']
+        logging.info("first move is to %d, %d" % (a,b))
+        a_cur, b_cur = self.get_pos()
+        from moves import Moves
+        moves = Moves()
+        moves.add_point(float(a_cur), float(b_cur), 0)
+        moves.add_point(float(a), float(b), 0)
+        moves.process()
+        points = moves.get_data()
+        self.run_robot(points)
+        
+    def run_robot(self, points):
         self._serial_port.flushInput()
         self.send_packet(STOP)
         status, data = self.get_response()
@@ -196,6 +206,7 @@ if __name__ == '__main__':
     parser.add_argument('--moveto', action='store', help="change string lengths to a,b (mm)")
     parser.add_argument('--can', action='store', default=90, help="can trigger amount", type=int)
     parser.add_argument('--getpos', const=True, action='store_const', help="get position")
+    parser.add_argument('--nopremove', const=True, action='store_const', help="get position")
     #parser.add_argument('--safez', action='store', dest='safez', type=float, default=1, help="z safety")
 
     start_time = time.time()
@@ -212,7 +223,12 @@ if __name__ == '__main__':
         p, i, d = args.setpid.split(',')
         robot.setpid(float(p), float(i), float(d))
     elif args.file:
-        robot.run_robot(args.file)
+        with open(args.file) as fh:
+            points = pickle.load(fh)
+        logging.debug("file is %d points long" % len(points['i']))
+        if not args.nopremove:
+            robot.pre_move(points)
+        robot.run_robot(points)
     elif args.getpos:
         robot.get_pos()
     else:

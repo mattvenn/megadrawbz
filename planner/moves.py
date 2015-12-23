@@ -10,11 +10,22 @@ class Moves():
     def __init__(self):
         self.points = []
         self.interp = []
-  
-    def dump(self,file):
+
+    def process(self):
+        self.break_segments()
+        self.calc_max_velocity()
+        self.plan_velocity()
+        self.calc_point_times()
+        self.interpolate_pos_by_time()
+        self.calc_string_lengths()
+
+    def dump_data(self,file):
         with open(file, 'w') as fh:
-            pickle.dump({'i' : self.interp, 'p' : self.points, 'bp': self.broken_points }, fh)
+            pickle.dump(self.get_data(), fh)
         
+    def get_data(self):
+        return {'i' : self.interp, 'p' : self.points, 'bp': self.broken_points }
+
     def add_point(self, x, y, can):
         point = np.array([x, y],dtype=np.float)
         log.info("appending point %s" % (point))
