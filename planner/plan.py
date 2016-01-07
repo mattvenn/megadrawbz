@@ -36,5 +36,5 @@ if __name__ == '__main__':
                 moves.add_point(float(x), float(y), can)
 
     moves.process()
-    moves.dump(args.out)
+    moves.dump_data(args.out)
 
