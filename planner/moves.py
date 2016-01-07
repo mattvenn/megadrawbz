@@ -5,6 +5,8 @@ from utils import *
 import pickle
 
 log = logging.getLogger(__name__)
+import sys
+sys.setrecursionlimit(2000)
 
 class Moves():
     def __init__(self):
