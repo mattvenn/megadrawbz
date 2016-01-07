@@ -156,8 +156,8 @@ class Control():
         from moves import Moves
         moves = Moves()
         # add_point takes rectangular points
-        moves.add_point(x_cur, y_cur, 0)
-        moves.add_point(x, y, 0)
+        moves.add_point(x_cur, y_cur, conf['can_off'])
+        moves.add_point(x, y, conf['can_off'])
         moves.process()
         points = moves.get_data()
         self.run_robot(points)
@@ -220,9 +220,7 @@ if __name__ == '__main__':
         robot.touchoff(int(l), int(r))
     elif args.moveto:
         x, y = args.moveto.split(',')
-        can = args.can
         robot.pre_move(int(x), int(y))
-        #robot.single_load(int(l), int(r), can)
     elif args.setpid:
         p, i, d = args.setpid.split(',')
         robot.setpid(float(p), float(i), float(d))
@@ -239,6 +237,9 @@ if __name__ == '__main__':
         robot.run_robot(points)
     elif args.getpos:
         robot.get_pos()
+    elif args.can:
+        a, b = robot.get_pos()
+        robot.single_load(l=a, r=b, can=args.can)
     else:
         parser.print_help()
    
