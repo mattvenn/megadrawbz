@@ -1,7 +1,7 @@
 conf = {
-    'plan_len' : 20,    # cm
-    'max_spd' : 15.0,
-    'acc' : 0.10,
+    'plan_len' : 10,    # cm
+    'max_spd' : 10,
+    'acc' : 0.05,
 
     'width' : 1705 - 130, # real width - gondola width
     'height' : 2000,
