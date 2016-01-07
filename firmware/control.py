@@ -7,6 +7,7 @@ import pickle
 import crcmod
 import argparse
 from conf import conf
+from utils import *
 
 #status
 BUFFER_OK = 0
@@ -35,19 +36,20 @@ SLV_TIMEOUT = 19
 buflen = 32
 freq = 50.0
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
 class Control():
 
     def __init__(self, port="/dev/ttyUSB0"):
-        print("opening port " + port)
-        self._serial_port=serial.Serial()
-        self._serial_port.port=port
-        self._serial_port.timeout=2
-        self._serial_port.baudrate=115200
-        self._serial_port.open()
-        self._serial_port.setDTR(True)
+        if not args.norobot:
+            print("opening port " + port)
+            self._serial_port=serial.Serial()
+            self._serial_port.port=port
+            self._serial_port.timeout=2
+            self._serial_port.baudrate=115200
+            self._serial_port.open()
+            self._serial_port.setDTR(True)
 
     """
     def __exit__(self):
@@ -112,6 +114,7 @@ class Control():
         status, rpos = self.get_response()
         assert status == GET_RPOS
         logging.info("l = %d, r = %d" % (lpos, rpos))
+        logging.info("x = %d, y = %d" % (polar_to_rect(lpos,rpos)))
         return lpos, rpos
         
     def single_load(self, l=0, r=0, can=0):
@@ -146,16 +149,15 @@ class Control():
         status, data = self.get_response()
         assert status == LOAD_D
 
-    def pre_move(self, points):
-        i = 0
-        a = points['i'][i]['a']
-        b = points['i'][i]['b']
-        logging.info("first move is to %d, %d" % (a,b))
+    def pre_move(self, x, y):
         a_cur, b_cur = self.get_pos()
+        x_cur, y_cur = polar_to_rect(float(a_cur), float(b_cur))
+        logging.info("planning move from %d, %d to %d, %d" % (x_cur,y_cur,x,y))
         from moves import Moves
         moves = Moves()
-        moves.add_point(float(a_cur), float(b_cur), 0)
-        moves.add_point(float(a), float(b), 0)
+        # add_point takes rectangular points
+        moves.add_point(x_cur, y_cur, 0)
+        moves.add_point(x, y, 0)
         moves.process()
         points = moves.get_data()
         self.run_robot(points)
@@ -207,6 +209,7 @@ if __name__ == '__main__':
     parser.add_argument('--can', action='store', default=90, help="can trigger amount", type=int)
     parser.add_argument('--getpos', const=True, action='store_const', help="get position")
     parser.add_argument('--nopremove', const=True, action='store_const', help="get position")
+    parser.add_argument('--norobot', const=True, action='store_const', help="no robot connected")
     #parser.add_argument('--safez', action='store', dest='safez', type=float, default=1, help="z safety")
 
     start_time = time.time()
@@ -216,9 +219,10 @@ if __name__ == '__main__':
         l, r = args.touchoff.split(',')
         robot.touchoff(int(l), int(r))
     elif args.moveto:
-        l, r = args.moveto.split(',')
+        x, y = args.moveto.split(',')
         can = args.can
-        robot.single_load(int(l), int(r), can)
+        robot.pre_move(int(x), int(y))
+        #robot.single_load(int(l), int(r), can)
     elif args.setpid:
         p, i, d = args.setpid.split(',')
         robot.setpid(float(p), float(i), float(d))
@@ -226,8 +230,12 @@ if __name__ == '__main__':
         with open(args.file) as fh:
             points = pickle.load(fh)
         logging.debug("file is %d points long" % len(points['i']))
+
         if not args.nopremove:
-            robot.pre_move(points)
+            logging.info("planning premove")
+            x, y = points['p'][0]['point']
+            robot.pre_move(x, y)
+        logging.info("running...")
         robot.run_robot(points)
     elif args.getpos:
         robot.get_pos()

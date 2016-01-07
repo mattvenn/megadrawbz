@@ -1,3 +1,26 @@
+## Thu Jan  7 16:55:43 GMT 2016
+
+pid tuning:
+
+    ./control.py  --setpid 1.5,0,0
+
+found errors with not converting string lengtsh to x y on premove - fixed
+
+convert_svg not clear, needs to be converted to python with arguments for width:
+TODO
+
+got this when converting an unflattened circle:
+
+    RuntimeError: maximum recursion depth exceeded in cmp
+    creating path visualisation in ../designs/visualisation/circle.html
+
+`fixed` by doing this:
+
+    import sys
+    sys.setrecursionlimit(2000)
+
+maybe find a better way to write algorithm?
+
 ## Fri Dec  4 23:26:19 GMT 2015
 
 investigating why keep getting serial timeout on the unit tests
