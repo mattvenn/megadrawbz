@@ -6,6 +6,12 @@ typedef struct {
     uint8_t cksum;
 } Can;
 
+/*
+arduino is positioned:
+* top 5 pins mesh with 9,10,11,12,13
+* bottom 4 pins mesh with gnd gnd +5, 3.3v
+*/
+
 #define LED_PIN 13
 #define XBEE_RX 10
 #define XBEE_TX 11 
