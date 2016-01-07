@@ -11,6 +11,7 @@ DATA_HOME=../designs
 
 BASE=$1
 WIDTH=${2:-500}
+echo $WIDTH
 
 INPUT_SVG=$DATA_HOME/originals/$BASE.svg 
 GENERATED_GCODE=$DATA_HOME/gcodes/$BASE.gcode 
