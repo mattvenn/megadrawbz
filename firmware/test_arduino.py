@@ -33,15 +33,34 @@ SLV_TIMEOUT = 19
 
 buflen = 32
 freq = 50.0
+PORT = '/dev/ttyUSB0'
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
-class TestBuffer(unittest.TestCase):
+
+class TestControl(unittest.TestCase):
+    @classmethod
+    def setupClass(cls):
+        from control import Control
+        cls._robot = Control(PORT)
+
+    def test_pre_plan(self):
+        from control import Control
+        robot = Control(PORT)
+        from conf import conf
+        width = conf['width']
+        top = conf['top']
+        for i in range(2):
+            robot.pre_move(width/2,top)
+            robot.pre_move(width/2,top + 500)
+
+
+class TestFirmware(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._serial_port=serial.Serial()
-        cls._serial_port.port='/dev/ttyUSB1'
+        cls._serial_port.port=PORT
         cls._serial_port.timeout=2
         cls._serial_port.baudrate=115200
         cls._serial_port.open()
@@ -149,6 +168,42 @@ class TestBuffer(unittest.TestCase):
             assert status == GET_RPOS
             assert data == pos - 1 # why?
 
+
+    # move up & down ,fetching stopping pos and printing error
+    def test_run_get_pos(self):
+        self.send_packet(STOP)
+        status, data = self.get_response()
+
+        self.send_packet(FLUSH)
+        status, data = self.get_response()
+
+        self.send_packet(START)
+        status, data = self.get_response()
+        self.assertEqual(status, START)
+
+        # do test around 1m string length
+        amount = 50
+        lpos = 1000
+        rpos = 1000
+
+        for i in range(1,20):
+            self.send_packet(LOAD, lpos + amount, rpos + amount, 0, i)
+            status, data = self.get_response()
+
+            # wait for move
+            time.sleep(1)
+
+            self.send_packet(GET_LPOS)
+            status, data = self.get_response()
+            assert status == GET_LPOS
+            print("L commanded = %d, cur = %d, err = %d" % (lpos+amount,data,lpos+amount-data))
+
+            self.send_packet(GET_RPOS)
+            status, data = self.get_response()
+            assert status == GET_RPOS
+            print("R commanded = %d, cur = %d, err = %d" % (lpos+amount,data,lpos+amount-data))
+            amount *= -1
+        
     def test_good_cksum(self):
         self._serial_port.flushInput()
         self.send_packet(STOP)

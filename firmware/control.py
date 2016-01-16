@@ -41,8 +41,8 @@ crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
 class Control():
 
-    def __init__(self, port="/dev/ttyUSB0"):
-        if not args.norobot:
+    def __init__(self, port="/dev/ttyUSB0", robot=True):
+        if robot:
             print("opening port " + port)
             self._serial_port=serial.Serial()
             self._serial_port.port=port
@@ -205,7 +205,8 @@ if __name__ == '__main__':
     parser.add_argument('--port', action='store', help="serial port", default='/dev/ttyUSB0')
     parser.add_argument('--touchoff', action='store', help="specify length of strings a,b (mm)")
     parser.add_argument('--setpid', action='store', help="p,i,d")
-    parser.add_argument('--moveto', action='store', help="change string lengths to a,b (mm)")
+    parser.add_argument('--setlen', action='store', help="change string lengths to a,b (mm)")
+    parser.add_argument('--moveto', action='store', help="move to x,y (mm)")
     parser.add_argument('--can', action='store', default=90, help="can trigger amount", type=int)
     parser.add_argument('--getpos', const=True, action='store_const', help="get position")
     parser.add_argument('--nopremove', const=True, action='store_const', help="get position")
@@ -214,13 +215,16 @@ if __name__ == '__main__':
 
     start_time = time.time()
     args = parser.parse_args()
-    robot = Control(args.port)
+    robot = Control(args.port, args.norobot)
     if args.touchoff:
         l, r = args.touchoff.split(',')
         robot.touchoff(int(l), int(r))
     elif args.moveto:
         x, y = args.moveto.split(',')
         robot.pre_move(int(x), int(y))
+    elif args.setlen:
+        a, b = args.setlen.split(',')
+        robot.single_load(l=int(a), r=int(b), can=args.can)
     elif args.setpid:
         p, i, d = args.setpid.split(',')
         robot.setpid(float(p), float(i), float(d))
