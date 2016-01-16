@@ -41,8 +41,8 @@ crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
 class Control():
 
-    def __init__(self, port="/dev/ttyUSB0", robot=True):
-        if robot:
+    def __init__(self, port="/dev/ttyUSB0", norobot=False):
+        if not norobot:
             print("opening port " + port)
             self._serial_port=serial.Serial()
             self._serial_port.port=port
@@ -84,6 +84,7 @@ class Control():
             return status, data
         else:
             logging.error("response time out")
+            exit(1)
 
     def send_packet(self, command, lpos=0, rpos=0, can=0, id=0):
         id = id % 256
@@ -104,6 +105,11 @@ class Control():
         self.send_packet(SET_POS,l,r)
         status, data = self.get_response()
         assert status == SET_POS
+
+    def can(self, can):
+        # have to send with valid pos
+        a, b = robot.get_pos()
+        robot.single_load(l=a, r=b, can=can)
 
     def get_pos(self):
         self.send_packet(GET_LPOS)
@@ -162,6 +168,17 @@ class Control():
         points = moves.get_data()
         self.run_robot(points)
         
+    def view(self, points):
+        i = 1
+        while i < len(points['i']):
+            a = points['i'][i]['a']
+            b = points['i'][i]['b']
+            can = points['i'][i]['can']
+#            logging.info("writing %d (%d,%d can %d)" % (i,a,b,can))
+            x, y = polar_to_rect(a,b)
+            logging.info("x=%d, y=%d, can=%d" % (x,y,can))
+            i += 1
+
     def run_robot(self, points):
         self._serial_port.flushInput()
         self.send_packet(STOP)
@@ -202,6 +219,7 @@ class Control():
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="control megadrawbz")
     parser.add_argument('--file', help='megadrawbz file to draw')
+    parser.add_argument('--view', const=True, action='store_const', help='view points')
     parser.add_argument('--port', action='store', help="serial port", default='/dev/ttyUSB0')
     parser.add_argument('--touchoff', action='store', help="specify length of strings a,b (mm)")
     parser.add_argument('--setpid', action='store', help="p,i,d")
@@ -231,7 +249,11 @@ if __name__ == '__main__':
     elif args.file:
         with open(args.file) as fh:
             points = pickle.load(fh)
-        logging.debug("file is %d points long" % len(points['i']))
+        logging.info("file is %d points long" % len(points['i']))
+
+        if args.view:
+            robot.view(points)
+            exit(0)
 
         if not args.nopremove:
             logging.info("planning premove")
@@ -239,11 +261,11 @@ if __name__ == '__main__':
             robot.pre_move(x, y)
         logging.info("running...")
         robot.run_robot(points)
+        robot.can(conf['can_off'])
     elif args.getpos:
         robot.get_pos()
     elif args.can:
-        a, b = robot.get_pos()
-        robot.single_load(l=a, r=b, can=args.can)
+        robot.can(args.can)
     else:
         parser.print_help()
    

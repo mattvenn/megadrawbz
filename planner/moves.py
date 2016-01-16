@@ -30,7 +30,7 @@ class Moves():
 
     def add_point(self, x, y, can):
         point = np.array([x, y],dtype=np.float)
-        log.info("appending point %s" % (point))
+        log.info("appending point %s = %d" % (point, can))
         self.points.append({'point': point, 'can' : can})
      
     def break_segments(self):
@@ -112,6 +112,7 @@ class Moves():
         
         else:
             log.warning("shouldn't get here")
+            log.warning("%f %f %f" %(v_calc_max, v_calc_min, point['max_spd']))
 
     def check_prev(self, n):
         log.debug("check prev n=%d" % n)
