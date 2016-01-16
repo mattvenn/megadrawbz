@@ -200,7 +200,7 @@ class Moves():
 
         speed = 1 - math.sin(angle)
         speed *= conf['max_spd']
-        log.info("point %03d (ltd) angle=%.2f max_spd=%.2f" % (i, angle, speed))
+        log.debug("point %03d (ltd) angle=%.2f max_spd=%.2f" % (i, angle, speed))
         return speed
 
     def unit_vector(self, vector):
