@@ -16,6 +16,7 @@ arduino is positioned:
 #define XBEE_RX 10
 #define XBEE_TX 11 
 #define SERVO 9
+#define SERVO_OFF 30
 
 Servo servo;
 
@@ -28,6 +29,7 @@ void setup()
   digitalWrite(LED_PIN,HIGH);
   xbee_serial.begin(57600);
   servo.attach(SERVO);
+  servo.write(SERVO_OFF);
 }
 
 void loop()
