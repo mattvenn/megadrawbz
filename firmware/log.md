@@ -1,13 +1,16 @@
 ## Thu Jan  7 16:55:43 GMT 2016
 
+TODO
+doesn't stop spraying at end!
+
 pid tuning:
 
     ./control.py  --setpid 1.5,0,0
 
 found errors with not converting string lengtsh to x y on premove - fixed
 
-convert_svg not clear, needs to be converted to python with arguments for width:
 TODO
+convert_svg not clear, needs to be converted to python with arguments for width:
 
 got this when converting an unflattened circle:
 
