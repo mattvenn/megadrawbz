@@ -8,31 +8,7 @@ import crcmod
 import argparse
 from conf import conf
 from utils import *
-
-#status
-BUFFER_OK = 0
-BUFFER_EMPTY = 1
-BUFFER_FULL = 2
-BAD_CKSUM = 3
-MISSING_DATA = 4
-BUFFER_LOW = 5
-BUFFER_HIGH = 6
-BAD_CMD = 7
-
-#commands
-START = 8
-STOP = 9
-LOAD = 10 
-FLUSH = 11 
-STATUS = 12 
-SET_POS = 13
-LOAD_P = 14
-LOAD_I = 15
-LOAD_D = 16
-GET_LPOS = 17
-GET_RPOS = 18
-SLV_TIMEOUT = 19
-HOME = 20
+from comms_messages import *
 
 buflen = 32
 freq = 50.0

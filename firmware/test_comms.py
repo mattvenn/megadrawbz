@@ -6,54 +6,15 @@ import math
 import struct
 import pickle
 import crcmod
-
-#status
-BUFFER_OK = 0
-BUFFER_EMPTY = 1
-BUFFER_FULL = 2
-BAD_CKSUM = 3
-MISSING_DATA = 4
-BUFFER_LOW = 5
-BUFFER_HIGH = 6
-BAD_CMD = 7
-
-#commands
-START = 8
-STOP = 9
-LOAD = 10 
-FLUSH = 11 
-STATUS = 12 
-SET_POS = 13
-LOAD_P = 14
-LOAD_I = 15
-LOAD_D = 16
-GET_LPOS = 17
-GET_RPOS = 18
-SLV_TIMEOUT = 19
+from comms_messages import *
 
 buflen = 32
 freq = 50.0
+
 PORT = '/dev/ttyUSB0'
 
 logging.basicConfig(level=logging.INFO)
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
-
-
-class TestControl(unittest.TestCase):
-    @classmethod
-    def setupClass(cls):
-        from control import Control
-        cls._robot = Control(PORT)
-
-    def test_pre_plan(self):
-        from control import Control
-        robot = Control(PORT)
-        from conf import conf
-        width = conf['width']
-        top = conf['top']
-        for i in range(2):
-            robot.pre_move(width/2,top)
-            robot.pre_move(width/2,top + 500)
 
 
 class TestFirmware(unittest.TestCase):
@@ -141,22 +102,25 @@ class TestFirmware(unittest.TestCase):
         status, data = self.get_response()
         self.assertEqual(status, LOAD_D)
 
-    def test_set_pos(self):
-        self.send_packet(SET_POS,1150,1150)
+    def test_set_pos(self,l=100, r=100):
+        self.send_packet(SET_POS,l, r)
         status, data = self.get_response()
         self.assertEqual(status, SET_POS)
 
     def test_get_lpos(self):
+        self.test_send_flush()
         for pos in range(10,100,10):
             self.send_packet(SET_POS,pos,pos)
             status, data = self.get_response()
             assert status == SET_POS
 
+            time.sleep(0.01)
             self.send_packet(GET_LPOS)
             status, data = self.get_response()
             assert status == GET_LPOS
             assert data == pos - 1 # why ?
 
+    @unittest.skip("skipping")
     def test_get_rpos(self):
         for pos in range(10,100,10):
             self.send_packet(SET_POS,pos,pos)
@@ -168,50 +132,16 @@ class TestFirmware(unittest.TestCase):
             assert status == GET_RPOS
             assert data == pos - 1 # why?
 
-
-    # move up & down ,fetching stopping pos and printing error
-    def test_run_get_pos(self):
-        self.send_packet(STOP)
-        status, data = self.get_response()
-
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
-
-        self.send_packet(START)
-        status, data = self.get_response()
-        self.assertEqual(status, START)
-
-        # do test around 1m string length
-        amount = 50
-        lpos = 1000
-        rpos = 1000
-
-        for i in range(1,20):
-            self.send_packet(LOAD, lpos + amount, rpos + amount, 0, i)
-            status, data = self.get_response()
-
-            # wait for move
-            time.sleep(1)
-
-            self.send_packet(GET_LPOS)
-            status, data = self.get_response()
-            assert status == GET_LPOS
-            print("L commanded = %d, cur = %d, err = %d" % (lpos+amount,data,lpos+amount-data))
-
-            self.send_packet(GET_RPOS)
-            status, data = self.get_response()
-            assert status == GET_RPOS
-            print("R commanded = %d, cur = %d, err = %d" % (lpos+amount,data,lpos+amount-data))
-            amount *= -1
-        
-    def test_good_cksum(self):
-        self._serial_port.flushInput()
+    def test_send_stop(self):
         self.send_packet(STOP)
         status, data = self.get_response()
         self.assertEqual(status, STOP)
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
-        for i in range(1,500):
+
+    def test_good_cksum(self):
+        self._serial_port.flushInput()
+        self.test_send_stop()
+        self.test_send_flush()
+        for i in range(1,50):
             logging.debug(i)
             self.send_packet(LOAD, i, i, 0, i)
             status, data = self.get_response()
@@ -219,13 +149,11 @@ class TestFirmware(unittest.TestCase):
 
     def test_bad_cksum(self):
         self._serial_port.flushInput()
-        self.send_packet(STOP)
-        status, data = self.get_response()
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
+        self.test_send_stop()
+        self.test_send_flush()
         for i in range(1,100):
             logging.debug(i)
-            bin = struct.pack('<BHHBB',START, i,i,i,0xFF)
+            bin = struct.pack('<BHHBBB',START, i, i, i, i, 0xFF)
             self.send_rs485_data(bin)
             status, data = self.get_response()
             self.assertEqual(status, BAD_CKSUM)
@@ -242,7 +170,7 @@ class TestFirmware(unittest.TestCase):
         # run at less than frequency
         for i in range(1, buflen / 2):
             logging.debug(i)
-            self.send_packet(LOAD, i, i, 0, i)
+            self.send_packet(LOAD, 0, 0, 0, i)
             status, data = self.get_response()
             time.sleep(20 * (1 / freq))
 
@@ -261,7 +189,7 @@ class TestFirmware(unittest.TestCase):
 
         for i in range(1, buflen + 1):
             logging.debug(i)
-            self.send_packet(LOAD, i, i, 0, i)
+            self.send_packet(LOAD, 0, 0, 0, i)
             status, data = self.get_response()
             time.sleep(0.1 * (1 / freq))
 
@@ -278,7 +206,7 @@ class TestFirmware(unittest.TestCase):
 
         for i in range(1, buflen / 2):
             logging.debug(i)
-            self.send_packet(LOAD, i, i, 0, i)
+            self.send_packet(LOAD, 0, 0, 0, i)
             status, data = self.get_response()
 
         self.send_packet(LOAD)
@@ -287,44 +215,7 @@ class TestFirmware(unittest.TestCase):
         self.assertEqual(status, MISSING_DATA)
         self.assertEqual(data, buflen / 2 - 1)
 
-    def test_accuracy(self, num=2, amount=500):
-        self._serial_port.flushInput()
-        self.send_packet(STOP)
-        status, data = self.get_response()
-        self.assertEqual(status, STOP)
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
-        self.assertEqual(status, BUFFER_EMPTY)
-
-        self.send_packet(SET_POS,0,0)
-        status, data = self.get_response()
-        self.assertEqual(status, SET_POS)
-
-        self.send_packet(START)
-        status, data = self.get_response()
-        self.assertEqual(status, START)
-
-        i = 1
-        while i < num * 2:
-            logging.debug(i)
-            self.send_packet(LOAD, amount, amount, 0, i)
-            status, data = self.get_response()
-            logging.debug(self.status_str(status))
-            #self.assertEqual(status, BUFFER_LOW)
-
-            time.sleep(3)
-            i += 1
-
-            logging.debug(i)
-            self.send_packet(LOAD, 0, 0, 0, i)
-            status, data = self.get_response()
-            logging.debug(self.status_str(status))
-            #self.assertEqual(status, BUFFER_LOW)
-
-            i += 1
-            time.sleep(3)
-
-    def test_single_load(self, amount=1000):
+    def test_single_load(self):
         self._serial_port.flushInput()
         self.send_packet(STOP)
         status, data = self.get_response()
@@ -337,18 +228,16 @@ class TestFirmware(unittest.TestCase):
         status, data = self.get_response()
         self.assertEqual(status, START)
 
-        self.send_packet(LOAD, amount, amount, 30, 1)
+        self.send_packet(LOAD, 0, 0, 30, 1)
         status, data = self.get_response()
         self.assertEqual(status, BUFFER_LOW)
 
     def test_keep_buffer_full(self, num=500):
         self._serial_port.flushInput()
-        self.send_packet(STOP)
-        status, data = self.get_response()
-        self.assertEqual(status, STOP)
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
-        self.assertEqual(status, BUFFER_EMPTY)
+
+        self.test_send_stop()
+        self.test_set_pos(0, 0)
+        self.test_send_flush()
 
         for i in range(1, num):
             logging.debug(i)
@@ -359,7 +248,7 @@ class TestFirmware(unittest.TestCase):
                 self.assertEqual(status, START)
 
             can = i % 70
-            self.send_packet(LOAD, i, i, can, i)
+            self.send_packet(LOAD, 0, 0, can, i)
             status, data = self.get_response()
 
             if status == BUFFER_OK:
@@ -373,119 +262,6 @@ class TestFirmware(unittest.TestCase):
                 self.fail("packet %d unexpected status: %s [%s]" % (i, self.status_str(status), data))
 
 
-    def test_run_robot(self):
-        with open('points.d') as fh:
-            points = pickle.load(fh)
-        logging.debug("file is %d points long" % len(points['i']))
-
-        self._serial_port.flushInput()
-        self.send_packet(STOP)
-        status, data = self.get_response()
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
-        self.assertEqual(status, BUFFER_EMPTY)
-        
-        i = 1
-        while i < len(points['i']):
-            if i == buflen / 2:
-                self.send_packet(START)
-                status, data = self.get_response()
-
-            a = points['i'][i]['a']
-            b = points['i'][i]['b']
-            can = points['i'][i]['can']
-            if can == 0:
-                can = 30
-            if can == 1:
-                can = 90
-            logging.debug("writing %d (%d,%d can %d)" % (i,a,b,can))
-            self.send_packet(LOAD, a, b, can, i)
-            status, data = self.get_response()
-            logging.debug(self.status_str(status))
-
-            if status == BUFFER_OK:
-                pass
-            elif status == BUFFER_LOW:
-                pass
-            elif status == BUFFER_HIGH:
-                time.sleep(buflen / 2 * (1 / freq))
-            else:
-                self.fail("packet %d unexpected status: %s [%s]" % (i, self.status_str(status), data))
-
-            i += 1
-
-    """
-    timing info
-
-    * messages sent every 20ms (50Hz).
-    * software serial has stop & start bits, plus 8 bits for the data.
-    * slave messages are 3 bytes (so 30 bits with software serial)
-        * 57600 msg takes 0.5ms
-        * 19200 msg takes 1.6ms
-        * 9600 msg takes 3.1ms
-        * 2400 msg takes 12ms
-
-
-
-    """
-
-        
-
-    @unittest.skip("skipping")
-    def test_read_slave_nums(self):
-        slave_port=serial.Serial()
-        slave_port.port='/dev/ttyUSB0'
-        slave_port.timeout=1
-        slave_port.baudrate=115200
-        slave_port.open()
-
-        slave_port.write('a')
-        ok = int(slave_port.readline())
-        bad_cksum = int(slave_port.readline())
-        logging.debug("bad cksum = %d, ok = %d" % (bad_cksum, ok))
-
-    def test_slave_direct(self):
-        slave_port=serial.Serial()
-        slave_port.port='/dev/ttyUSB0'
-        slave_port.timeout=1
-        slave_port.baudrate=57600
-        slave_port.open()
-        
-    # @unittest.skip("skipping")
-    def test_slave_comms(self):
-        slave_port=serial.Serial()
-        slave_port.port='/dev/ttyUSB0'
-        slave_port.timeout=1
-        slave_port.baudrate=115200
-        slave_port.open()
-
-        # this doesn't always work, don't know why
-        import ipdb; ipdb.set_trace()
-        slave_port.write('b') # clear sums
-        slave_port.write('a')
-        ok = int(slave_port.readline())
-        bad_cksum = int(slave_port.readline())
-        self.assertEqual(ok, 0)
-        self.assertEqual(bad_cksum, 0)
-
-        # run tests on buffer
-        num = 1000
-        self.test_keep_buffer_full(num)
-
-        # wait for buffer to empty
-        time.sleep(1.5 * buflen * (1 / freq))
-
-        self.send_packet(STATUS)
-        status, data = self.get_response()
-        self.assertEqual(status, BUFFER_EMPTY)
-
-        slave_port.write('a')
-        ok = int(slave_port.readline())
-        bad_cksum = int(slave_port.readline())
-        logging.debug("bad cksum = %d, ok = %d" % (bad_cksum, ok))
-        self.assertEqual(ok, num-1)  # starts at 1
-        self.assertEqual(bad_cksum, 0)
-    
 if __name__ == '__main__':
     unittest.main()
     exit(0)
