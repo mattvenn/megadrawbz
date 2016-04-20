@@ -17,7 +17,7 @@ logging.basicConfig(level=logging.INFO)
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
 
-class TestFirmware(unittest.TestCase):
+class TestComms(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls._serial_port=serial.Serial()
