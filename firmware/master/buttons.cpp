@@ -12,16 +12,21 @@ void buttons_setup()
     digitalWrite(BUT_LIMIT, HIGH);
 }
 
-enum ButtonStatus buttons_check()
+bool check_limit()
 {
     if(digitalRead(BUT_LIMIT) == LOW)
-        return(LIMIT);
-    else if(digitalRead(BUT_IN) == LOW)
-        return(IN);
+        return(true);
+    return false;
+}
+
+enum ButtonStatus buttons_check()
+{
+    if(digitalRead(BUT_IN) == LOW)
+        return(B_IN);
     else if(digitalRead(BUT_OUT) == LOW)
-        return(OUT);
+        return(B_OUT);
     else if(digitalRead(BUT_HOME) == LOW)
-        return(HOME);
+        return(B_HOME);
     else
-        return NONE;
+        return B_NONE;
 }

@@ -32,11 +32,12 @@ LOAD_D = 16
 GET_LPOS = 17
 GET_RPOS = 18
 SLV_TIMEOUT = 19
+HOME = 20
 
 buflen = 32
 freq = 50.0
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
 class Control():
@@ -83,7 +84,7 @@ class Control():
             assert cksum == crc8_func(bin)
             return status, data
         else:
-            logging.error("response time out")
+            logging.error("response time out - is programmer attached?")
             exit(1)
 
     def send_packet(self, command, lpos=0, rpos=0, can=0, id=0):
@@ -120,7 +121,7 @@ class Control():
         status, rpos = self.get_response()
         assert status == GET_RPOS
         logging.info("l = %d, r = %d" % (lpos, rpos))
-        logging.info("x = %d, y = %d" % (polar_to_rect(lpos,rpos)))
+        #logging.info("x = %d, y = %d" % (polar_to_rect(lpos,rpos)))
         return lpos, rpos
         
     def single_load(self, l=0, r=0, can=0):
@@ -154,6 +155,13 @@ class Control():
         self.send_packet(LOAD_D, d, d)
         status, data = self.get_response()
         assert status == LOAD_D
+
+    def home(self):
+        logging.info("homing...")
+        self.send_packet(HOME, 0, 0)
+        status, data = self.get_response()
+        assert status == HOME
+        logging.info("done")
 
     def pre_move(self, x, y):
         a_cur, b_cur = self.get_pos()
@@ -221,6 +229,7 @@ if __name__ == '__main__':
     parser.add_argument('--file', help='megadrawbz file to draw')
     parser.add_argument('--view', const=True, action='store_const', help='view points')
     parser.add_argument('--port', action='store', help="serial port", default='/dev/ttyUSB0')
+    parser.add_argument('--home', const=True, action='store_const', help="home")
     parser.add_argument('--touchoff', action='store', help="specify length of strings a,b (mm)")
     parser.add_argument('--setpid', action='store', help="p,i,d")
     parser.add_argument('--setlen', action='store', help="change string lengths to a,b (mm)")
@@ -237,6 +246,8 @@ if __name__ == '__main__':
     if args.touchoff:
         l, r = args.touchoff.split(',')
         robot.touchoff(int(l), int(r))
+    elif args.home:
+        robot.home()
     elif args.moveto:
         x, y = args.moveto.split(',')
         robot.pre_move(int(x), int(y))

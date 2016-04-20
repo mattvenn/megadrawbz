@@ -22,10 +22,15 @@ firmware for servos for a large polargraph/v-plotter
 
 ## to do
 
-* homing button
+* homing button - prototyped with a microswitch & plate
 * stall detect (current or encoder)?
 * homing signal
 * python keyboard control of both servos (in/out)
+
+## programming notes
+
+with programmer attached, breaks rs485 signal (due to leakage into TX pin?).
+With a diode between TX programmer and RX on the board, both can work.
 
 ## can xbee setup
 

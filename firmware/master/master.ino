@@ -104,7 +104,7 @@ struct Buffer buffer = {{}, 0, 0};;
 
 //command definitions - could separate this out into different types of things
 //and have each type taking a few bits in a status byte.
-enum BufferStatus {BUFFER_OK, BUFFER_EMPTY, BUFFER_FULL, BAD_CKSUM, MISSING_DATA,BUFFER_LOW, BUFFER_HIGH, BAD_CMD, START, STOP, LOAD, FLUSH, STATUS, SET_POS, LOAD_P, LOAD_I, LOAD_D, GET_LPOS, GET_RPOS, SLV_TIMEOUT };
+enum BufferStatus {BUFFER_OK, BUFFER_EMPTY, BUFFER_FULL, BAD_CKSUM, MISSING_DATA,BUFFER_LOW, BUFFER_HIGH, BAD_CMD, START, STOP, LOAD, FLUSH, STATUS, SET_POS, LOAD_P, LOAD_I, LOAD_D, GET_LPOS, GET_RPOS, SLV_TIMEOUT, HOME };
 
 typedef enum {SLV_LOAD, SLV_SET_POS, SLV_LOAD_P, SLV_LOAD_I, SLV_LOAD_D, SLV_GET_POS} SlaveCommand;
 
@@ -195,29 +195,35 @@ void pid_init()
     xnm2 = 0;
 }
 
+void home()
+{
+    while(! check_limit())
+        drive(HOME_PWM);
+
+    drive(0);
+
+    delay(100); //wait for things to stop moving
+
+    posref = 0;
+    myEnc.write(0);
+}
 
 void loop()
 {
     switch(buttons_check())
     {
-        case IN:
+        case B_IN:
             if(posref < MAX_POSREF)
                 posref ++;
             delay(1);
             break;
-        case OUT:
+        case B_OUT:
             if(posref > 0)
                 posref --;
             delay(1);
             break;
-        case HOME:
-            /*
-            while(buttons_check() != LIMIT)
-                drive(HOME_PWM);
-            drive(0);
-            */
-            posref = 0;
-            myEnc.write(0);
+        case B_HOME:
+            home();
             break;
     }
 
@@ -302,6 +308,10 @@ void loop()
                 buffer.newest_index = 0;
                 send_response(bufferStatus(),0);
                 break;
+            case HOME:
+                send_response(HOME,0);
+                home();
+                break;
             case SET_POS:
                 //update servo pos
                 posref = data.lpos * mm_to_pulse;
@@ -314,6 +324,7 @@ void loop()
                 break;
             case GET_RPOS:
                 {
+                    /*
                     send_slave(SLV_GET_POS, 0);
                     Response resp = get_slave();
                     if(resp.status == BAD_CKSUM)
@@ -323,6 +334,8 @@ void loop()
                     else
                         send_response(GET_RPOS, resp.data);
                     break;
+                    */
+                    send_response(GET_RPOS, 0);
                 }
             case LOAD_P:
                 kp = data.lpos / 1000.0;
@@ -354,9 +367,7 @@ void loop()
     if(abs(read_current()) > STALL_CURRENT)
     {
         digitalWrite(LED_ERROR, HIGH);
-        //substitute this for drive(0) after branch merge
-        analogWrite(FOR,0);
-        analogWrite(REV,0);
+        drive(0);
         delay(1000);
         digitalWrite(LED_ERROR, LOW);
         //could flush here too
