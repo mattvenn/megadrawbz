@@ -4,6 +4,9 @@ bootloader is uno running on atmega328
 buffer tips:
 http://hackaday.com/2015/10/29/embed-with-elliot-going-round-with-circular-buffers/
 
+encoder lib is
+https://github.com/PaulStoffregen/Encoder
+
 rs485 tips
 http://www.gammon.com.au/forum/?id=11428
 
