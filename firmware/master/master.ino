@@ -299,7 +299,7 @@ void loop()
                 load(data);
                 break;
             case STATUS:
-                send_response(bufferStatus(),0);
+                send_response(bufferStatus(),last_id);
                 break;
             case FLUSH:
                 //flush buffer

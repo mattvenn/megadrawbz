@@ -55,4 +55,12 @@ ATWR
 6 = 57600 bps
 7 = 115200 bps
 
-## issues
+## timing info
+
+* messages sent every 20ms (50Hz).
+* software serial has stop & start bits, plus 8 bits for the data.
+* slave messages are 3 bytes (so 30 bits with software serial)
+    * 57600 msg takes 0.5ms
+    * 19200 msg takes 1.6ms
+    * 9600 msg takes 3.1ms
+    * 2400 msg takes 12ms

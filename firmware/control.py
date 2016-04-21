@@ -13,7 +13,7 @@ from comms_messages import *
 buflen = 32
 freq = 50.0
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
 class Control():
@@ -61,7 +61,7 @@ class Control():
             return status, data
         else:
             logging.error("response time out - is programmer attached?")
-            exit(1)
+            raise Exception("timeout")
 
     def send_packet(self, command, lpos=0, rpos=0, can=0, id=0):
         id = id % 256
@@ -96,7 +96,7 @@ class Control():
         self.send_packet(GET_RPOS)
         status, rpos = self.get_response()
         assert status == GET_RPOS
-        logging.info("l = %d, r = %d" % (lpos, rpos))
+        #logging.info("l = %d, r = %d" % (lpos, rpos))
         #logging.info("x = %d, y = %d" % (polar_to_rect(lpos,rpos)))
         return lpos, rpos
         
@@ -108,6 +108,7 @@ class Control():
 
         self.send_packet(FLUSH)
         status, data = self.get_response()
+        self.assertEqual(status, BUFFER_EMPTY)
 
         self.send_packet(START)
         status, data = self.get_response()

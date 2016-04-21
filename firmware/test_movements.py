@@ -1,105 +1,89 @@
+import unittest
+import time
+import pickle
+import logging
+import struct
+from comms_messages import *
+from control import Control
 
-    # move up & down ,fetching stopping pos and printing error
-    def test_run_get_pos(self):
-        self.send_packet(STOP)
-        status, data = self.get_response()
+buflen = 32
+freq = 50.0
 
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
+PORT = '/dev/ttyUSB0'
 
-        self.send_packet(START)
-        status, data = self.get_response()
-        self.assertEqual(status, START)
+logging.basicConfig(level=logging.INFO)
 
-        # do test around 1m string length
-        amount = 50
-        lpos = 1000
-        rpos = 1000
 
-        for i in range(1,20):
-            self.send_packet(LOAD, lpos + amount, rpos + amount, 0, i)
-            status, data = self.get_response()
+class TestMovements(unittest.TestCase):
 
-            # wait for move
-            time.sleep(1)
+    @classmethod
+    def setUpClass(cls):
+        logging.info("setup")
+        cls._robot = Control(PORT)
 
-            self.send_packet(GET_LPOS)
-            status, data = self.get_response()
-            assert status == GET_LPOS
-            print("L commanded = %d, cur = %d, err = %d" % (lpos+amount,data,lpos+amount-data))
+    def test_error_pos(self):
+        # home
+        self._robot.send_packet(HOME, 0, 0)
+        status, data = self._robot.get_response()
+        assert status == HOME
+       
+        # wait for home to finish TODO this properly
+        time.sleep(2)
 
-            self.send_packet(GET_RPOS)
-            status, data = self.get_response()
-            assert status == GET_RPOS
-            print("R commanded = %d, cur = %d, err = %d" % (lpos+amount,data,lpos+amount-data))
-            amount *= -1
-        
-    def test_accuracy(self, num=2, amount=500):
-        self._serial_port.flushInput()
-        self.send_packet(STOP)
-        status, data = self.get_response()
-        self.assertEqual(status, STOP)
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
-        self.assertEqual(status, BUFFER_EMPTY)
+        from moves import Moves
+        moves = Moves()
+        # add_point takes rectangular points
+        moves.add_point(0, 0, 0)
+        moves.add_point(600, 0, 0)
+        moves.add_point(10, 0, 0)
+        moves.add_point(400, 0, 0)
+        moves.add_point(10, 0, 0)
+        moves.process()
+        points = moves.get_data()
 
-        self.send_packet(SET_POS,0,0)
-        status, data = self.get_response()
-        self.assertEqual(status, SET_POS)
+        self.run_robot(points)
 
-        self.send_packet(START)
-        status, data = self.get_response()
-        self.assertEqual(status, START)
-
+    def run_robot(self, points):
+        self._robot.send_packet(STOP)
+        status, data = self._robot.get_response()
+        self._robot.send_packet(FLUSH)
+        status, data = self._robot.get_response()
+        print(status)
+        assert status == BUFFER_EMPTY
+       
+        results = { 'index' : [], 'commanded' : [], 'measured' : [] } 
         i = 1
-        while i < num * 2:
-            logging.debug(i)
-            self.send_packet(LOAD, amount, amount, 0, i)
-            status, data = self.get_response()
-            logging.debug(self.status_str(status))
-            #self.assertEqual(status, BUFFER_LOW)
-
-            time.sleep(3)
-            i += 1
-
-            logging.debug(i)
-            self.send_packet(LOAD, 0, 0, 0, i)
-            status, data = self.get_response()
-            logging.debug(self.status_str(status))
-            #self.assertEqual(status, BUFFER_LOW)
-
-            i += 1
-            time.sleep(3)
-
-    def test_run_robot(self):
-        with open('points.d') as fh:
-            points = pickle.load(fh)
-        logging.debug("file is %d points long" % len(points['i']))
-
-        self._serial_port.flushInput()
-        self.send_packet(STOP)
-        status, data = self.get_response()
-        self.send_packet(FLUSH)
-        status, data = self.get_response()
-        self.assertEqual(status, BUFFER_EMPTY)
-        
-        i = 1
+        last_index = 0
+        index_offset = 0
         while i < len(points['i']):
+            # fetch error
+            if i % 10 == 0:
+                self._robot.send_packet(STATUS)
+                status, index = self._robot.get_response()
+                if index < last_index:
+                    index_offset += 256
+
+                self._robot.send_packet(GET_LPOS)
+                status, lpos = self._robot.get_response()
+                assert status == GET_LPOS
+                logging.info("[%03d] command = %03d actual = %03d" % (index + index_offset, points['i'][index+index_offset]['a'], lpos))
+                results['index'].append(index + index_offset)
+                results['commanded'].append(points['i'][index + index_offset]['a'])
+                results['measured'].append(lpos)
+                last_index = index
+
+                
             if i == buflen / 2:
-                self.send_packet(START)
-                status, data = self.get_response()
+                self._robot.send_packet(START)
+                status, data = self._robot.get_response()
 
             a = points['i'][i]['a']
             b = points['i'][i]['b']
             can = points['i'][i]['can']
-            if can == 0:
-                can = 30
-            if can == 1:
-                can = 90
             logging.debug("writing %d (%d,%d can %d)" % (i,a,b,can))
-            self.send_packet(LOAD, a, b, can, i)
-            status, data = self.get_response()
-            logging.debug(self.status_str(status))
+            self._robot.send_packet(LOAD, a, b, can, i)
+            status, data = self._robot.get_response()
+            logging.debug(self._robot.status_str(status))
 
             if status == BUFFER_OK:
                 pass
@@ -108,23 +92,12 @@
             elif status == BUFFER_HIGH:
                 time.sleep(buflen / 2 * (1 / freq))
             else:
-                self.fail("packet %d unexpected status: %s [%s]" % (i, self.status_str(status), data))
+                self.fail("packet %d unexpected status: %s [%s]" % (i, self._robot.status_str(status), data))
 
             i += 1
-
-    """
-    timing info
-
-    * messages sent every 20ms (50Hz).
-    * software serial has stop & start bits, plus 8 bits for the data.
-    * slave messages are 3 bytes (so 30 bits with software serial)
-        * 57600 msg takes 0.5ms
-        * 19200 msg takes 1.6ms
-        * 9600 msg takes 3.1ms
-        * 2400 msg takes 12ms
-
-
-
-    """
+        with open('error.pkl', 'w') as fh:
+            pickle.dump(results, fh)
 
         
+if __name__ == '__main__':
+    unittest.main()

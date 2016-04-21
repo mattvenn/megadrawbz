@@ -14,6 +14,7 @@ logging.basicConfig(level=logging.INFO)
 
 
 class TestComms(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         cls._robot = Control(PORT)
